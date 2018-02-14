@@ -4,17 +4,21 @@ This project is a showcase of how to use MQTT as a client application.
 
 In fact the project was created to demonstrate an implausible behavior of MQTT.
 
-### starting position
+### starting position / use case
 
-In a real project several applications subscribe (nearly at the same time because they are started in parallel) to the same MQTT topic (with wildcard). The topic contains about 500 retained messages (each in an own sub topic level) which all applications are expected to receive (they are subscribing with QoS 1).
+In a real project several applications subscribe (nearly at the same time because they are started in parallel) to the same MQTT topic (with wildcard). The topic contains about 500 retained messages (each in an own sub topic level) which contain some kind of configuration information. All applications are expected to receive these messages on every start (they are subscribing with QoS 1).
+
+Beside the "configuration" messages also data topics are subscribed with the same MQTT connection. No persisted state is required (and wanted here). Therefore the application instances connect with `cleanSession=true`.
+
+For my understanding it would be sufficient if the application instances would each connect with a fixed clientId as _cleanSession=true_ should avoid any state handling. But to be really sure that no state is considered  a `unique MQTT clientId` is generated for each connect. 
 
 ### observed behavior
 
-Unfortunately they do not all get the retained messages. Some get no messages at all from the topic - regardless of how long the subscription lasts. I first thought that the _maxInflight_ (client side) or _max_queued_messages_ (server side) configuration might be the reasons, but after increasing both to 500,000 I guess this is not the reasons behind the failure.
+Unfortunately not all application instances get the retained messages. Some get no messages at all from the topic - regardless of how long the subscription lasts. I first thought that the _maxInflight_ (client side) or _max_queued_messages_ (server side) configuration might be the reasons, but after increasing both to 500,000 I guess this is not the reasons behind the failure.
 
 ### reproduction as test
 
-Therefore I created this project with a repro. There is a unit test class in the repro [MqttSubscriptionTest](src/test/java/de/frvabe/mqtt/client/showcase/MqttSubscriptionTest.java) with the test method `multiThreadSubscriptionTest`. When executing this test some (1000) retained messages will be published first in the `@BeforeClasse` method. After that 20 instances of a `MqttSubscriber` class which implements the `IMqttMessageListener` and `Runnable` interface will be instantiated and executed. Each MqttSubscriber instance will be executed in an own thread with an own MqttClient instance and will subscribe to the topic tree with the retained messages. This is logged to the console as follows:
+Therefore I created this project with a repro. There is a unit test class in the repro [MqttSubscriptionTest](src/test/java/de/frvabe/mqtt/client/showcase/MqttSubscriptionTest.java) with the test method `multiThreadSubscriptionTest`. When executing this test some (1000) retained messages will be published first in the `@BeforeClass` method. After that 20 instances of a `MqttSubscriber` class which implements the `IMqttMessageListener` and `Runnable` interface will be instantiated and executed. Each MqttSubscriber instance will be executed in an own thread with an own MqttClient instance and will subscribe to the topic tree with the retained messages. This is logged to the console as follows:
 
 ```
 ----------- perform subscriptions
