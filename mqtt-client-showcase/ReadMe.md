@@ -18,7 +18,7 @@ Unfortunately not all application instances get the retained messages. Some get 
 
 ### reproduction as test
 
-Therefore I created this project with a repro. There is a unit test class in the repro [MqttSubscriptionTest](src/test/java/de/frvabe/mqtt/client/showcase/MqttSubscriptionTest.java) with the test method `multiThreadSubscriptionTest`. When executing this test some (1000) retained messages will be published first in the `@BeforeClass` method. After that 20 instances of a `MqttSubscriber` class which implements the `IMqttMessageListener` and `Runnable` interface will be instantiated and executed. Each MqttSubscriber instance will be executed in an own thread with an own MqttClient instance and will subscribe to the topic tree with the retained messages. This is logged to the console as follows:
+Therefore I created this project with a repro. There is a unit test class in the repro [MqttSubscriptionTest](src/test/java/de/frvabe/mqtt/client/showcase/MqttSubscriptionTest.java) with the test method `multiThreadSubscriptionTest`. When executing this test some (1000) retained messages will be published first in the `@BeforeClass` method. After that 10 instances of a `MqttSubscriber` class which implements the `IMqttMessageListener` and `Runnable` interface will be instantiated and executed. Each MqttSubscriber instance will be executed in an own thread with an own MqttClient instance and will subscribe to the topic tree with the retained messages. This is logged to the console as follows:
 
 ```
 ----------- perform subscriptions
