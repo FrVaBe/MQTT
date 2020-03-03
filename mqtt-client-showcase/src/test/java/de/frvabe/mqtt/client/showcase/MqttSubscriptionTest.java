@@ -1,7 +1,7 @@
 package de.frvabe.mqtt.client.showcase;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,9 +16,9 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Class to test the subscription of multiple threads (MQTT clients) to the same topic. It is
@@ -32,8 +32,6 @@ public class MqttSubscriptionTest {
     private static final String TEST_TOPIC = "mqtt/client/showcase/mutliThreadSubscription";
     private static final String[] mqttServerUris = new String[] {"tcp://localhost:1883"};
 
-    private static final boolean CLEAN_SESSION = true;
-
     /**
      * A subscriber Thread. This will be used to subscribe to a topic and is expected to receive all
      * retained messages.
@@ -42,11 +40,6 @@ public class MqttSubscriptionTest {
 
         private Set<String> messages = new HashSet<>();
         private long duration;
-        private String name;
-
-        public MqttSubscriber(final String name) {
-            this.name = name;
-        }
 
         /**
          * The callback method of the MQTT message listener. Messages of subscribed topics will be
@@ -66,7 +59,7 @@ public class MqttSubscriptionTest {
             long start = System.currentTimeMillis();
 
             try {
-                subscriberMqttClient = getConnectedMqttClient(name, CLEAN_SESSION);
+                subscriberMqttClient = getConnectedMqttClient();
                 System.out.println(Thread.currentThread().getName() + " subscribing topic '"
                         + subscribeTopic + "'");
                 subscriberMqttClient.subscribe(subscribeTopic, this);
@@ -109,10 +102,10 @@ public class MqttSubscriptionTest {
      * 
      * @throws MqttException in case of any MQTT exceptions
      */
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() throws MqttException {
 
-        MqttClient mqttClient = getConnectedMqttClient(true);
+        MqttClient mqttClient = getConnectedMqttClient();
 
         for (int i = 0; i < TEST_MESSAGE_COUNT; i++) {
             String topic = TEST_TOPIC + "/" + i;
@@ -130,10 +123,10 @@ public class MqttSubscriptionTest {
      * 
      * @throws MqttException in case of any MQTT exceptions
      */
-    @AfterClass
+    @AfterAll
     public static void afterClass() throws MqttException {
 
-        MqttClient mqttClient = getConnectedMqttClient(true);
+        MqttClient mqttClient = getConnectedMqttClient();
         byte[] emptyMessage = new byte[] {};
 
         for (int i = 0; i < TEST_MESSAGE_COUNT; i++) {
@@ -160,9 +153,8 @@ public class MqttSubscriptionTest {
 
         // perform some subscriptions in different threads to the same topic
         for (int i = 0; i < MQTT_CLIENT_COUNT; i++) {
-            String subscriberName = "Subscriber-" + i;
-            MqttSubscriber subscriber = new MqttSubscriber(subscriberName);
-            Thread thread = new Thread(subscriber, subscriberName);
+            MqttSubscriber subscriber = new MqttSubscriber();
+            Thread thread = new Thread(subscriber, "Subscriber-" + i);
             subscriberThreads.put(thread, subscriber);
             thread.start();
         }
@@ -197,8 +189,8 @@ public class MqttSubscriptionTest {
     @Test
     public void singleThreadSubscriptionTest() throws InterruptedException {
 
-        MqttSubscriber subscriber = new MqttSubscriber("SingleMqttSubscriber");
-        Thread thread = new Thread(subscriber, "SingleMqttSubscriber");
+        MqttSubscriber subscriber = new MqttSubscriber();
+        Thread thread = new Thread(subscriber, "MqttSubscriber");
         thread.start();
         Thread.sleep(2000);
         System.out.println(thread.getName() + ": receivedMessages="
@@ -212,36 +204,20 @@ public class MqttSubscriptionTest {
     /**
      * Gets a new MQTT client. The client is already connected.
      * 
-     * @param cleanSession the cleanSession flag
      * @return a new connected MQTT client
      * @throws MqttException in case of any MQTT exception
      */
-    public static MqttClient getConnectedMqttClient(final boolean cleanSession)
-            throws MqttException {
-        String mqttClientId = "MTST" + "-" + UUID.randomUUID().toString().replaceAll("-", "");
-        return getConnectedMqttClient(mqttClientId, cleanSession);
-
-    }
-
-    /**
-     * Gets a new MQTT client. The client is already connected.
-     * 
-     * @param clientId the MQTT clientId
-     * @param cleanSession the cleanSession flag
-     * @return a new connected MQTT client
-     * @throws MqttException in case of any MQTT exception
-     */
-    public static MqttClient getConnectedMqttClient(final String clientId,
-            final boolean cleanSession) throws MqttException {
+    public static MqttClient getConnectedMqttClient() throws MqttException {
         MqttConnectOptions connOpts = new MqttConnectOptions();
-        connOpts.setCleanSession(cleanSession);
+        connOpts.setCleanSession(true);
         connOpts.setServerURIs(mqttServerUris);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(500_000);
         connOpts.setKeepAliveInterval(60);
 
+        String mqttClientId = "MTST" + "-" + UUID.randomUUID().toString().replaceAll("-", "");
         MqttClient mqttClient =
-                new MqttClient(mqttServerUris[0], clientId, new MemoryPersistence());
+                new MqttClient(mqttServerUris[0], mqttClientId, new MemoryPersistence());
         mqttClient.connect(connOpts);
 
         return mqttClient;
